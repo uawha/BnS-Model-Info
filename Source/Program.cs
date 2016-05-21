@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Elan.Generic;
 using System.IO;
 using System.Collections.Generic;
@@ -10,7 +10,7 @@ namespace bns_model_info
     {
         static void Main(string[] args)
         {
-            Console.Title = "BnS Model Info Generator, ver.20160521";
+            Console.Title = "BnS Model Info Generator, ver.20160522";
             Program_Parameter para;
             if (Program_Parameter.Parse(args, out para))
             {
@@ -58,9 +58,9 @@ namespace bns_model_info
     /// </summary>
     class Program_Parameter
     {
-        const string op_build_modelInfo_withChnName = "-mcn";
+        const string op_build_modelInfo_withChnName = "-mn";
         const string op_build_modelInfo = "-m";
-        const string op_build_chnNameModelRelation = "-cn";
+        const string op_build_nameModelRelation = "-n";
         const string path_prefix_upk = "-up=";
         const string path_prefix_dat = "-dp=";
 
@@ -78,7 +78,7 @@ namespace bns_model_info
                 parameter = new Program_Parameter() {
                     IfWrite_ModelInfo = lcs.Contains(op_build_modelInfo),
                     IfWrite_ModelInfo_withName = lcs.Contains(op_build_modelInfo_withChnName),
-                    IfWrite_NameModelRelation = lcs.Contains(op_build_chnNameModelRelation),
+                    IfWrite_NameModelRelation = lcs.Contains(op_build_nameModelRelation),
                     FolderPath_Upk = get_firstContent_prefixedBy(lcs, path_prefix_upk),
                     FolderPath_Dat = get_firstContent_prefixedBy(lcs, path_prefix_dat)
                 };
