@@ -36,4 +36,5 @@ This is a tiny program for generating documents used by BnS model modifiers. Her
 So. Top level objects are meshes. Then the texture packages it uses. Then the material constants refer to them. If it has a name(because game devs want gamers to play with it), or names, they are stacked there.
 
 ##How to use
-明天再写。
+Read `usage.txt.md`
+
