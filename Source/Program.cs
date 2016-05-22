@@ -10,7 +10,7 @@ namespace bns_model_info
     {
         static void Main(string[] args)
         {
-            Console.Title = "BnS Model Info Generator, ver.20160522";
+            Console.Title = "BnS Model Info Generator, ver 1.0.6, build date 2016-05-22";
             Program_Parameter para;
             if (Program_Parameter.Parse(args, out para))
             {
@@ -18,27 +18,26 @@ namespace bns_model_info
                 //now write!
                 if (para.IfWrite_ModelInfo)
                 {
-                    File.WriteAllText($"BnS_ModelInfo.{MISC.GetPathable_YMD(DateTime.Now)}.txt", UPackageInfo_Analyzer.Generate_ModelInfo(false));
+                    File.WriteAllText($"{para.FolderPath_Out}BnS_ModelInfo.{MISC.GetPathable_YMD(DateTime.Now)}.txt", UPackageInfo_Analyzer.Generate_ModelInfo(false));
                 }
                 if (para.IfWrite_ModelInfo_withName)
                 {
-                    File.WriteAllText($"BnS_ModelInfo_withName.{MISC.GetPathable_YMD(DateTime.Now)}.txt", UPackageInfo_Analyzer.Generate_ModelInfo(true));
+                    File.WriteAllText($"{para.FolderPath_Out}BnS_ModelInfo_withName.{MISC.GetPathable_YMD(DateTime.Now)}.txt", UPackageInfo_Analyzer.Generate_ModelInfo(true));
                 }
                 if (para.IfWrite_NameModelRelation)
                 {
-                    File.WriteAllText($"BnS_NameModel_Relation.{MISC.GetPathable_YMD(DateTime.Now)}.txt", DatInfo_Generator.Generate_ObjHumanInfo());
+                    File.WriteAllText($"{para.FolderPath_Out}BnS_NameModel_Relation.{MISC.GetPathable_YMD(DateTime.Now)}.txt", DatInfo_Generator.Generate_ObjHumanInfo());
                 }
+                Console.WriteLine();
+                Console.WriteLine("    Programming by Elan(or iVAiU, I no longer use that name).");
+                Console.WriteLine("    Many thanks to: Eliot van Uytfanghe (UELib), ronny1982 (bnsdat).");
             }
             Console.WriteLine("End of Program.");
-            Console.WriteLine();
-            Console.WriteLine("   Programming by Elan(or iVAiU, I no longer use that name).");
-            Console.WriteLine("   Many thanks to: Eliot van Uytfanghe (UELib), ronny1982 (bnsdat).");
-            Console.ReadLine();
         }
 
         static void PrepareData(Program_Parameter para)
         {
-            ///先处理这个。因为UPK处理时间有点长，这个要是之后出错了时间损失要大一些。
+            ///先处理这个。因为 UPK 处理时间有点长，要是出错了时间损失比较大。
             if (para.IfWrite_ModelInfo_withName || para.IfWrite_NameModelRelation)
             {
                 DatInfo_Generator.init();
@@ -47,9 +46,9 @@ namespace bns_model_info
                     DatInfo_Generator.BuildMap_ObjRenderInfo_CNName();
                 }
             }
-            if (para.IfWrite_ModelInfo)
+            if (para.IfWrite_ModelInfo || para.IfWrite_ModelInfo_withName)
             {
-                UPackageInfo_Analyzer.init(PackageInfo_Loader.Load_Folder());
+                UPackageInfo_Analyzer.init(PackageInfo_Loader.Load_Folder(para.FolderPath_Out));
             }
         }
     }
@@ -63,6 +62,7 @@ namespace bns_model_info
         const string op_build_nameModelRelation = "-n";
         const string path_prefix_upk = "-up=";
         const string path_prefix_dat = "-dp=";
+        const string path_prefix_out = "-o=";
 
         public static bool Parse(string[] args, out Program_Parameter parameter)
         {
@@ -80,7 +80,8 @@ namespace bns_model_info
                     IfWrite_ModelInfo_withName = lcs.Contains(op_build_modelInfo_withChnName),
                     IfWrite_NameModelRelation = lcs.Contains(op_build_nameModelRelation),
                     FolderPath_Upk = get_firstContent_prefixedBy(lcs, path_prefix_upk),
-                    FolderPath_Dat = get_firstContent_prefixedBy(lcs, path_prefix_dat)
+                    FolderPath_Dat = get_firstContent_prefixedBy(lcs, path_prefix_dat),
+                    FolderPath_Out = get_firstContent_prefixedBy(lcs, path_prefix_out)
                 };
                 if (parameter.dispatch())
                 {
@@ -154,6 +155,48 @@ namespace bns_model_info
                 return false;
             }
 
+            /// output path validify
+            if (FolderPath_Out != null)
+            {
+                bool use = false;
+                if (Directory.Exists(FolderPath_Out))
+                {
+                    if (!FolderPath_Out.EndsWith("\\"))
+                    {
+                        FolderPath_Out += "\\";
+                    }
+                    use = true;
+                }
+                else
+                {
+                    Console.Write("The output folder you specified does not exist. Trying to create...");
+                    try
+                    {
+                        Directory.CreateDirectory(FolderPath_Out);
+                        Console.WriteLine("Success");
+                        if (!FolderPath_Out.EndsWith("\\"))
+                        {
+                            FolderPath_Out += "\\";
+                        }
+                        use = true;
+                    }
+                    catch
+                    {
+                        Console.WriteLine("Failure. Will use the current folder as output folder.");
+                    }
+                }
+                // on failure
+                if (!use)
+                {
+                    FolderPath_Out = "";
+                }
+            }
+            else
+            {
+                FolderPath_Out = "";
+                Console.WriteLine("Will use the current folder as output folder.");
+            }
+
             Console.WriteLine("Parameter Dispatched Successfully.");
             return true;
         }
@@ -186,5 +229,6 @@ namespace bns_model_info
         public bool IfWrite_NameModelRelation;
         public string FolderPath_Upk;
         public string FolderPath_Dat;
+        public string FolderPath_Out;
     }
 }
