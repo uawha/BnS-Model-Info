@@ -1,10 +1,11 @@
-﻿using System;
+using System;
+using System.IO;
 using System.Text;
 using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 
-//version 2016.05.21:2
+//version 2016.05.22
 namespace Elan.Generic
 {
     namespace EqualityComparer
@@ -415,6 +416,49 @@ namespace Elan.Generic
         public static string GetPathable_TMDHM(DateTime date_time)
         {
             return $"{GetPathable_YMD(date_time)}{GetPathable_HM(date_time)}";
+        }
+        public static string GetSpaceString_ofLength(int num)
+        {
+            if (num < 1)
+            {
+                return String.Empty;
+            }
+            else
+            {
+                var sb = new StringBuilder();
+                for (int j = 0; j < num; j++)
+                {
+                    sb.Append(" ");
+                }
+                return sb.ToString();
+            }
+        }
+
+        public static long TryGet_FileLength(string file_path)
+        {
+            long _R;
+            try
+            {
+                _R = (new FileInfo(file_path)).Length;
+            }
+            catch
+            {
+                _R = -1;
+            }
+            return _R;
+        }
+
+        public static string GetString_ofFileLength(string file_path)
+        {
+            long size = TryGet_FileLength(file_path);
+            if (size > 0)
+            {
+                return $"{String.Format("{0:N0}", size)} bytes";
+            }
+            else
+            {
+                return "fail to get file size";
+            }
         }
     }
 }
