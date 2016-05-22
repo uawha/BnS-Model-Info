@@ -1,4 +1,6 @@
-﻿using System;
+using System;
+using System.Text;
+using Elan.Generic;
 using System.IO;
 using UELib;
 using System.Collections.Generic;
@@ -152,15 +154,22 @@ namespace bns_model_info
                 is_UFolder_set = true;
             }
         }
-        public static List<UPackage_Info> Load_Folder()
+        public static List<UPackage_Info> Load_Folder(string log_path = "")
         {
             if (!is_UFolder_set) throw new Exception("Coder's fault.");
             var files = Directory.EnumerateFiles(u_folder, "*", SearchOption.AllDirectories)
                 .Where(x => If_LoadFile(x)).ToArray();
-            var sw = new StreamWriter(log_file);
             var _R = new List<UPackage_Info>();
+            //
+            string vac255 = MISC.GetSpaceString_ofLength(255);
+            Console.BufferWidth = 300;
+            Console.WriteLine();
+            var log_sb = new StringBuilder();
             foreach (var v in files)
             {
+                Console.CursorTop -= 1;
+                Console.WriteLine(vac255);
+                Console.CursorTop -= 1;
                 Console.Write($"[Reading from] {v}");
                 TextWriter tmp = Console.Out;
                 StringWriter tsw = new StringWriter();
@@ -176,12 +185,18 @@ namespace bns_model_info
                 {
                     tsw.Close();
                     Console.SetOut(tmp);
-                    Console.WriteLine(" < Failure");
-                    sw.WriteLine($"[Failure] {v}");
+                    Console.WriteLine($" < Failure, file size: {MISC.GetString_ofFileLength(v)}\n");
+                    log_sb.AppendLine($"[Reading Failure] {v} [File Size: {MISC.GetString_ofFileLength(v)}]");
                 }
             }
-            sw.Close();
-            Console.WriteLine("Loading Done.");
+            var log = log_sb.ToString();
+            if (log?.Length > 0)
+            {
+                Console.Write("Writing log to ouput folder...");
+                File.WriteAllText($"{log_path}{log_file}", log);
+                Console.WriteLine("Done.");
+            }
+            Console.WriteLine("The loading process is done.");
             return _R;
         }
     }
