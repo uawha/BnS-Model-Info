@@ -38,3 +38,4 @@ So. Top level objects are meshes. Then the texture packages it uses. Then the ma
 ##How to use
 Read `usage.txt.md`
 
+要是不会英文（或者懒得看），去`releases`那里下载`bns_model_info-X.Y.Z_with_tools.7z`，里边有中文说明。
