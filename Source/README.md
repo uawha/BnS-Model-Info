@@ -1,6 +1,10 @@
-##Dependency
+##Requirements & Dependency
 To build, you need this library:
 https://github.com/EliotVU/Unreal-Library
+
+Target dotNet platform version: 4
+
+Source written in C Sharp 6
 
 ##Customizing Document Layout
 This is the my layout for `BnS_ModelInfo_withName`. The structure is pretty clear to me. 
