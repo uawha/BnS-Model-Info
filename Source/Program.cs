@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using Elan.MISC;
 using Elan.Generic;
 using System.IO;
 using System.Collections.Generic;
@@ -129,11 +130,12 @@ namespace bns_model_info
                     if (Directory.Exists(FolderPath_Dat))
                     {
                         var files = Directory.EnumerateFiles(FolderPath_Dat, "*.xml", SearchOption.AllDirectories);
-                        string xml103 = get_file(files, "datafile_103.xml");
-                        string xml230 = get_file(files, "datafile_230.xml");
-                        if (xml103 != null && xml230 != null)
+                        DatInfo_Config.init();
+                        string fp_itemModel = get_file(files, DatInfo_Config.AliasObj_FileName);
+                        string fp_itemName = get_file(files, DatInfo_Config.AliasHuman_FileName);
+                        if (fp_itemModel != null && fp_itemName != null)
                         {
-                            DatInfo_Generator.Set_XmlFile_Path(xml103, xml230);
+                            DatInfo_Generator.Set_XmlFile_Path(fp_itemModel, fp_itemName);
                         }
                         else
                         {
