@@ -35,7 +35,15 @@ namespace bns_model_info
         {
             if (!init_done) throw new Exception("Coder's fault.");
             Console.Write("Now arranging output...be patient...");
-            ifQueryName = if_query_name;
+            if (if_query_name && !DatInfo_Generator.QueryName_Ready)
+            {
+                Console.WriteLine("[Error] The document contains NAME cannot be generated because of lack of information.");
+                return "";
+            }
+            else
+            {
+                ifQueryName = if_query_name;
+            }
             var sb = new StringBuilder();
             foreach (var mesh_pkg in meshPkgs)
             {
