@@ -5,7 +5,6 @@ using System.Xml;
 using System.Collections.Generic;
 using System.Linq;
 using Elan.Generic;
-using Elan.Generic.EqualityComparer;
 
 namespace bns_model_info
 {
@@ -61,9 +60,9 @@ namespace bns_model_info
     class Alias_Human
     {
         LookUps alu;
-        public Alias_Human(string xml230_filePath)
+        public Alias_Human(string fp_iName)
         {
-            alu = new LookUps(xml230_filePath);
+            alu = new LookUps(fp_iName);
         }
 
         IEnumerable<HashSet<string>> RelationEntity()
@@ -118,10 +117,10 @@ namespace bns_model_info
     {
         public Dictionary<string, HashSet<string>> ah_map;
         LookUps alu;
-        public Alias_ObjSet(string xml103_file_path, Alias_Human ah)
+        public Alias_ObjSet(string fp_iModel, Alias_Human ah)
         {
             ah_map = ah.DictEntity();
-            alu = new LookUps(xml103_file_path);
+            alu = new LookUps(fp_iModel);
         }
 
         IEnumerable<HashSet<string>> RelationEntity()
@@ -155,7 +154,7 @@ namespace bns_model_info
         public Dictionary<HashSet<string>, HashSet<string>> DictEntity()
         {
             return RelationEntity().JoinMap_RangeAsSet(
-                domain_map, range_map, new HashSetEqualityComparer<string>());
+                domain_map, range_map, EqualityComparer.HashSetEqualityComparer<string>.Get());
         }
         public int Count()
         {
@@ -173,15 +172,15 @@ namespace bns_model_info
         }
 
         static bool is_xml_location_set;
-        public static void Set_XmlFile_Path(string xml_103_path, string xml_230_path)
+        public static void Set_XmlFile_Path(string fp_iModel, string fp_iName)
         {
-            xml103_path = xml_103_path;
-            xml230_path = xml_230_path;
+            filePath_itemModelLookup = fp_iModel;
+            filePath_itemNameLookup = fp_iName;
             is_xml_location_set = true;
         }
 
-        static string xml103_path;
-        static string xml230_path;
+        static string filePath_itemModelLookup;
+        static string filePath_itemNameLookup;
         static Dictionary<string, HashSet<string>> dict_aliasHuman;
         static Dictionary<HashSet<string>, HashSet<string>> dict_aliasObj;
 
@@ -190,17 +189,36 @@ namespace bns_model_info
         {
             if (!is_xml_location_set) throw new Exception("Coder's fault.");
             Console.Write("Initializing Name-Model relation builder...");
-            var ah = new Alias_Human(xml230_path);
-            var ao = new Alias_ObjSet(xml103_path, ah);
+            var ah = new Alias_Human(filePath_itemNameLookup);
+            var ao = new Alias_ObjSet(filePath_itemModelLookup, ah);
             dict_aliasHuman = ao.ah_map;
             dict_aliasObj = ao.DictEntity();
-            Console.WriteLine($"Done, Alias-Human: {dict_aliasHuman.Count}, Alias-Obj: {dict_aliasObj.Count}");
+            Console.WriteLine($"Done, AliasHuman: {dict_aliasHuman.Count}, AliasObj: {dict_aliasObj.Count}");
+            if (dict_aliasHuman.Count == 0)
+            {
+                Console.WriteLine($"[Error] AliasHuman info has nothing.");
+            }
+            if (dict_aliasObj.Count == 0)
+            {
+                Console.WriteLine($"[Error] AliasObj info has nothing.");
+            }
+            if (dict_aliasHuman.Count == 0 || dict_aliasObj.Count == 0)
+            {
+                Console.WriteLine($"  Find the right file, and change the relative program config option in the file \"{DatInfo_Config.Config_FileName}\".");
+                Console.WriteLine("  One or more function(s) will not be useable.");
+            }
             init_done = true;
         }
 
         public static string Generate_ObjHumanInfo()
         {
             if (!init_done) init();
+            if (dict_aliasHuman.Count == 0 || dict_aliasObj.Count == 0)
+            {
+                Console.WriteLine($"[Error] Name Model Info could not be built, because one or two of AliasHuman and AliasObj has null info.");
+                return "";
+            }
+            Console.Write("Generating Name Model Info...");
             var sb = new StringBuilder();
             foreach (var kvp_ao in dict_aliasObj)
             {
@@ -218,6 +236,7 @@ namespace bns_model_info
                 }
                 sb.AppendLine();
             }
+            Console.WriteLine("Done.");
             return sb.ToString();
         }
 
@@ -226,6 +245,12 @@ namespace bns_model_info
         public static void BuildMap_ObjRenderInfo_CNName()
         {
             if (!init_done) init();
+            if (dict_aliasHuman.Count == 0 || dict_aliasObj.Count == 0)
+            {
+                Console.WriteLine($"[Error] Model-Name Map could not be built, because one or two of AliasHuman and AliasObj has null info.");
+                QueryName_Ready = false;
+                return;
+            }
             Console.Write("Building Model-Name Map...");
             Dict_ObjRenderInfo_HumanName = new Dictionary<HashSet<string>, HashSet<string>>();
             foreach (var kvp in dict_aliasObj)
