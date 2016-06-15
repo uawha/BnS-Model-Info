@@ -1,94 +1,228 @@
-using System;
-using System.IO;
+﻿using System;
 using System.Text;
 using System.Linq;
 using System.Collections;
 using System.Collections.Generic;
 
-//version 2016.05.22
+//version 2016.06.11
 namespace Elan.Generic
 {
-    namespace EqualityComparer
+    public class EqualityComparer
     {
+        public class ConstructEqualityComparer<T> : IEqualityComparer<T>
+        {
+            public bool Equals(T x, T y)
+            {
+                return Equals_Core(x, y);
+            }
+            public int GetHashCode(T obj)
+            {
+                return Hash_Core(obj);
+            }
+            public Func<T, T, bool> Equals_Core;
+            public Func<T, int> Hash_Core;
+            public static ConstructEqualityComparer<T> By(
+                Func<T, T, bool> equal_condition,
+                Func<T, int> hash_func)
+            {
+                return new ConstructEqualityComparer<T>() {
+                    Equals_Core = equal_condition,
+                    Hash_Core = hash_func
+                };
+            }
+        }
+
+        /// <summary>
+        /// A simple wrapper around IStructuralEquatable for generic `Key`.
+        /// </summary>
+        /// <typeparam name="T">type of element to compare</typeparam>
         public class StructuralEqualityComparer<T> : IEqualityComparer<T>
             where T : IStructuralEquatable
         {
-            bool IEqualityComparer<T>.Equals(T x, T y)
+            public bool Equals(T x, T y)
             {
-                return ((IStructuralEquatable)x).Equals(y, StructuralComparisons.StructuralEqualityComparer);
+                return x.Equals(y, StructuralComparisons.StructuralEqualityComparer);
             }
-
-            int IEqualityComparer<T>.GetHashCode(T obj)
+            public int GetHashCode(T obj)
             {
                 return StructuralComparisons.StructuralEqualityComparer.GetHashCode(obj);
             }
+
+            public static StructuralEqualityComparer<T> Get()
+            {
+                return new StructuralEqualityComparer<T>();
+            }
         }
 
-        public class SetEqualityComparer<TElement, TSet> : IEqualityComparer<ISet<TElement>>
+        /// <summary>
+        /// As the System.Array. For not using ToArray() and
+        /// fetch a StructuralEqualityComparer for that.
+        /// </summary>
+        /// <typeparam name="TElement"></typeparam>
+        /// <typeparam name="TList"></typeparam>
+        public class iListEqualityComparer<TElement, TList> : IEqualityComparer<TList>
+            where TList : IList<TElement>
+            where TElement : IEquatable<TElement>
+        {
+            // From System.Web.Util.HashCodeCombiner
+            // From System.Array
+            static int CombineHashCodes(int h1, int h2)
+            {
+                return (((h1 << 5) + h1) ^ h2);
+            }
+
+            public bool Equals(TList x, TList y)
+            {
+                if (x?.Count > 0 && y?.Count > 0 && x.Count == y.Count)
+                {
+                    if (Object.ReferenceEquals(x, y)) return true;
+                    for (int i = 0; i < x.Count; i += 1)
+                    {
+                        if (!x[i].Equals(y[i])) return false;
+                    }
+                    return true;
+                }
+                else return false;
+            }
+
+            public int GetHashCode(TList obj)
+            {
+                int init = 0;
+                for (int i = (obj.Count >= 7 ? obj.Count - 7 : 0); i < obj.Count; i += 1)
+                {
+                    init = CombineHashCodes(init, obj[i].GetHashCode());
+                    // last section of 7 elements
+                }
+                return init;
+            }
+
+            public static iListEqualityComparer<TElement, TList> Get()
+            {
+                return new iListEqualityComparer<TElement, TList>();
+            }
+        }
+
+        public class ListEqualityComparer<TElement>
+            where TElement : IEquatable<TElement>
+        {
+            public static iListEqualityComparer<TElement, List<TElement>> Get()
+            {
+                return new iListEqualityComparer<TElement, List<TElement>>();
+            }
+        }
+
+        /// <summary>
+        /// GetHashCode() use XOR;
+        /// Equals() use SetEquals().
+        /// </summary>
+        /// <typeparam name="TElement"></typeparam>
+        /// <typeparam name="TSet"></typeparam>
+        public class iSetEqualityComparer<TElement, TSet> : IEqualityComparer<TSet>
             where TSet : ISet<TElement>
         {
-            bool IEqualityComparer<ISet<TElement>>.Equals(ISet<TElement> x, ISet<TElement> y)
-            { return x.SetEquals(y); }
+            public bool Equals(TSet x, TSet y)
+            {
+                return x.SetEquals(y);
+            }
 
-            int IEqualityComparer<ISet<TElement>>.GetHashCode(ISet<TElement> obj)
+            public int GetHashCode(TSet obj)
             {
                 if (obj?.Count > 0)
                 {
-                    int init = obj.ElementAt(0).GetHashCode();
-                    if (obj.Count > 1)
+                    int init = 0;
+                    foreach (var s in obj)
                     {
-                        int i = 0;
-                        foreach (var s in obj)
-                        {
-                            if (i > 0) init = init ^ s.GetHashCode();
-                            i++;
-                        }
-                        return init;
+                        init = init ^ s.GetHashCode();
+                        // we must take all into account...coz it's SET.
+                        // while we can take a first or last section of
+                        // a list to generate its hash, it not possible
+                        // to do the same for set, coz it will break the
+                        // definition of hash function. e.g.:
+                        // Set A: 1,2,3,4,5
+                        // Set B: 2,5,4,3,1
                     }
-                    else return init;
+                    return init;
                 }
                 else return 0;
             }
+
+            // sometimes I prefer not to use `new'.
+            public static iSetEqualityComparer<TElement, TSet> Get()
+            {
+                return new iSetEqualityComparer<TElement, TSet>();
+            }
         }
 
-        public class HashSetEqualityComparer<TElement> : IEqualityComparer<HashSet<TElement>>
+        public class HashSetEqualityComparer<TElement>
         {
-            bool IEqualityComparer<HashSet<TElement>>.Equals(HashSet<TElement> x, HashSet<TElement> y)
-            { return x.SetEquals(y); }
-
-            int IEqualityComparer<HashSet<TElement>>.GetHashCode(HashSet<TElement> obj)
+            public static iSetEqualityComparer<TElement, HashSet<TElement>> Get()
             {
-                if (obj?.Count > 0)
-                {
-                    int init = obj.ElementAt(0).GetHashCode();
-                    if (obj.Count > 1)
-                    {
-                        int i = 0;
-                        foreach (var s in obj)
-                        {
-                            if (i > 0) init = init ^ s.GetHashCode();
-                            i++;
-                        }
-                        return init;
-                    }
-                    else return init;
-                }
-                else return 0;
+                return new iSetEqualityComparer<TElement, HashSet<TElement>>();
             }
         }
     }
 
-    public interface ITreeNode<out T>
+    namespace Comparer
     {
-        bool Is_RootNode { get; }
-        bool Is_LeafNode { get; }
-        T NodeContent { get; }
-        IEnumerable<ITreeNode<T>> SubNodes { get; }
+        public class ConstructComparer<T> : IComparer<T>
+        {
+            public int Compare(T x, T y)
+            {
+                return Core(x, y);
+            }
+            public Func<T, T, int> Core;
+            public static ConstructComparer<T> By(Func<T, T, int> compare_func)
+            {
+                return new ConstructComparer<T>() { Core = compare_func };
+            }
+        }
     }
 
-    public interface IValuedTreeNode<out TNode, out TValue> : ITreeNode<TNode>
+    namespace Tree
     {
-        TValue Get_Value();
+        public interface ITree<out TNode>
+        {
+            bool Is_RootNode { get; }
+            bool Is_LeafNode { get; }
+            TNode NodeContent { get; }
+            IEnumerable<ITree<TNode>> SubTrees { get; }
+        }
+
+        public interface IValuedTree<out TNode, out TValue> : ITree<TNode>
+        {
+            TValue Get_Value();
+        }
+
+        #region 1+2*3
+        /// <summary>
+        /// if Is_Value, implement Value; else, Operation
+        /// </summary>
+        /// <typeparam name="TValue"></typeparam>
+        public interface IOperationTree_Node<TValue>
+        {
+            bool Is_Value { get; }
+            TValue Value { get; }
+            Func<IEnumerable<ITree<IOperationTree_Node<TValue>>>, TValue> Operation { get; }
+        }
+        /// <summary>
+        /// since c sharp abstract class and interface cannot supply implementation...
+        /// </summary>
+        public static class OperationTree_EX
+        {
+            public static TValue ComputeValue<TValue>(this ITree<IOperationTree_Node<TValue>> input)
+            {
+                if (input.NodeContent.Is_Value)
+                {
+                    return input.NodeContent.Value;
+                }
+                else
+                {
+                    return input.NodeContent.Operation(input.SubTrees);
+                }
+            }
+        }
+
+        #endregion
     }
 
     public static class Index_Method_EX
@@ -130,6 +264,7 @@ namespace Elan.Generic
 
     public static class Enumerable_EX
     {
+        #region Reverse Map
         /// <summary>
         /// all elements in the domain are in the rev map's range, even if the domain you pass in is not a set
         /// regards to some equality comparer.
@@ -182,7 +317,9 @@ namespace Elan.Generic
             }
             return _R;
         }
+        #endregion
 
+        #region Join Map
         public static Dictionary<TKey, HashSet<TValue>> JoinMap_RangeAsSet<TSource, TKey, TValue>(
             this IEnumerable<TSource> source_collection,
             Func<TSource, TKey> src_key_map, Func<TSource, TValue> src_value_map,
@@ -235,7 +372,7 @@ namespace Elan.Generic
             }
             return _R;
         }
-
+        #endregion
         /// <summary>
         /// works like String.Substring()
         /// </summary>
@@ -304,6 +441,8 @@ namespace Elan.Generic
             return _R;
         }
 
+        #region LookUps
+        // since ILookup is not offline doced, do not use.
         public static Dictionary<TKey, List<TElement>> ToMap_RangeAsList<TKey, TElement>(this ILookup<TKey, TElement> input)
         {
             IEnumerable<IGrouping<TKey, TElement>> u_ref = input;
@@ -339,7 +478,7 @@ namespace Elan.Generic
             foreach (var v in key_set) _R.Add(v, input[v].ToSet());
             return _R;
         }
-
+        #endregion
         //the depth 1 collection might be anything
         public static List<T> MakeUnion<T>(this IEnumerable<IEnumerable<T>> input)
         {
@@ -400,65 +539,6 @@ namespace Elan.Generic
             }
             result = default(T);
             return false;
-        }
-    }
-
-    public static class MISC
-    {
-        public static string GetPathable_YMD(DateTime date_time)
-        {
-            return $"{date_time.Year}{date_time.Month.ToString().PadLeft(2, '0')}{date_time.Day.ToString().PadLeft(2, '0')}";
-        }
-        public static string GetPathable_HM(DateTime date_time)
-        {
-            return $"{date_time.Hour.ToString().PadLeft(2, '0')}{ date_time.Minute.ToString().PadLeft(2, '0')}";
-        }
-        public static string GetPathable_TMDHM(DateTime date_time)
-        {
-            return $"{GetPathable_YMD(date_time)}{GetPathable_HM(date_time)}";
-        }
-        public static string GetSpaceString_ofLength(int num)
-        {
-            if (num < 1)
-            {
-                return String.Empty;
-            }
-            else
-            {
-                var sb = new StringBuilder();
-                for (int j = 0; j < num; j++)
-                {
-                    sb.Append(" ");
-                }
-                return sb.ToString();
-            }
-        }
-
-        public static long TryGet_FileLength(string file_path)
-        {
-            long _R;
-            try
-            {
-                _R = (new FileInfo(file_path)).Length;
-            }
-            catch
-            {
-                _R = -1;
-            }
-            return _R;
-        }
-
-        public static string GetString_ofFileLength(string file_path)
-        {
-            long size = TryGet_FileLength(file_path);
-            if (size > 0)
-            {
-                return $"{String.Format("{0:N0}", size)} bytes";
-            }
-            else
-            {
-                return "fail to get file size";
-            }
         }
     }
 }
