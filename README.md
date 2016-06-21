@@ -2,7 +2,9 @@
 If you are looking for infos of BnS Unreal package file structure, I have nothing to tell you because I barely know anything, but I point you to these pages:
 
 https://sites.google.com/site/sippeyfunlabs/blade-and-soul-a-unreal-3-based-game-mod-section/upk-format
+
 http://eliotvu.com/news/view/35/deserializing-unreal-packages-tables
+
 http://www.gildor.org/smf/index.php?topic=2129.0#quickModForm
 
 ##What this is about
